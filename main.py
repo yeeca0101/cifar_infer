@@ -24,6 +24,7 @@ from experiments.activation.acts import *
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--act', default='sASN', type=str, help='act')
+parser.add_argument('--save_folder', default='checkpoint', type=str, help='checkpoint save folder')
 parser.add_argument('--n_classes', default=10, type=int, help='number of classes')
 parser.add_argument('--device', default='0', type=str, help='device number')
 parser.add_argument('--resume', '-r', action='store_true',
@@ -33,9 +34,15 @@ args = parser.parse_args()
 device = f'cuda:{args.device}' if torch.cuda.is_available() else 'cpu'
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
-act = SwishT()
-optimizer = None
+act = SwishT(requires_grad=False)
 
+
+save_folder = args.save_folder
+if not os.path.isdir(save_folder):
+    os.makedirs(save_folder)
+    print('make dirs ',save_folder)
+
+optimizer = None
 # Data
 print(device)
 print('==> Preparing data..')
@@ -164,14 +171,21 @@ def test(epoch):
             'epoch': epoch,
             'act' : act,
         }
-        if not os.path.isdir('checkpoint'):
-            os.mkdir('checkpoint')
-        torch.save(state, f'./checkpoint/ckpt_{model_type}_cifar100_{act.__class__.__name__}.pth')
+        
+        torch.save(state, f'./{save_folder}/ckpt_{model_type}_{dataset_class.__name__}_{act.__class__.__name__}.pth')
         best_acc = acc
         best_state = state
 
-for epoch in range(start_epoch, start_epoch+200):
-    train(epoch)
-    test(epoch)
-    scheduler.step()
-print(best_state['act'],' ',best_state['epoch'],' ',best_state['acc'])
+def main():
+    for epoch in range(start_epoch, start_epoch+200):
+        train(epoch)
+        test(epoch)
+        scheduler.step()
+    print(best_state['act'],' ',best_state['epoch'],' ',best_state['acc'])
+
+if __name__ == '__main__':
+    acts = get_activations(return_type='dict') # name,class()
+
+    for name,act in acts:
+        main(act)
+
