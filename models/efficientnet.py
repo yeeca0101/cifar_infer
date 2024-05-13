@@ -23,18 +23,19 @@ def drop_connect(x, drop_ratio):
 
 
 class SE(nn.Module):
-    '''Squeeze-and-Excitation block with Swish.'''
+    '''Squeeze-and-Excitation block with self.act.'''
 
-    def __init__(self, in_channels, se_channels):
+    def __init__(self, in_channels, se_channels,act=lambda x : swish(x)):
         super(SE, self).__init__()
         self.se1 = nn.Conv2d(in_channels, se_channels,
                              kernel_size=1, bias=True)
         self.se2 = nn.Conv2d(se_channels, in_channels,
                              kernel_size=1, bias=True)
+        self.act =act
 
     def forward(self, x):
         out = F.adaptive_avg_pool2d(x, (1, 1))
-        out = swish(self.se1(out))
+        out = self.act(self.se1(out))
         out = self.se2(out).sigmoid()
         out = x * out
         return out
@@ -50,11 +51,14 @@ class Block(nn.Module):
                  stride,
                  expand_ratio=1,
                  se_ratio=0.,
-                 drop_rate=0.):
+                 drop_rate=0.,
+                 act=lambda x: swish(x)):
+        
         super(Block, self).__init__()
         self.stride = stride
         self.drop_rate = drop_rate
         self.expand_ratio = expand_ratio
+        self.act = act
 
         # Expansion
         channels = expand_ratio * in_channels
@@ -93,8 +97,8 @@ class Block(nn.Module):
         self.has_skip = (stride == 1) and (in_channels == out_channels)
 
     def forward(self, x):
-        out = x if self.expand_ratio == 1 else swish(self.bn1(self.conv1(x)))
-        out = swish(self.bn2(self.conv2(out)))
+        out = x if self.expand_ratio == 1 else self.act(self.bn1(self.conv1(x)))
+        out = self.act(self.bn2(self.conv2(out)))
         out = self.se(out)
         out = self.bn3(self.conv3(out))
         if self.has_skip:
@@ -108,6 +112,8 @@ class EfficientNet(nn.Module):
     def __init__(self, cfg, num_classes=10):
         super(EfficientNet, self).__init__()
         self.cfg = cfg
+        self.act = cfg['act']
+
         self.conv1 = nn.Conv2d(3,
                                32,
                                kernel_size=3,
@@ -116,7 +122,7 @@ class EfficientNet(nn.Module):
                                bias=False)
         self.bn1 = nn.BatchNorm2d(32)
         self.layers = self._make_layers(in_channels=32)
-        self.linear = nn.Linear(cfg['out_channels'][-1], num_classes)
+        self.linear = nn.Linear(cfg['out_channels'][-1], cfg['n_classes'])
 
     def _make_layers(self, in_channels):
         layers = []
@@ -135,12 +141,14 @@ class EfficientNet(nn.Module):
                           stride,
                           expansion,
                           se_ratio=0.25,
-                          drop_rate=drop_rate))
+                          drop_rate=drop_rate,
+                          act=self.act))
+                
                 in_channels = out_channels
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        out = swish(self.bn1(self.conv1(x)))
+        out = self.act(self.bn1(self.conv1(x)))
         out = self.layers(out)
         out = F.adaptive_avg_pool2d(out, 1)
         out = out.view(out.size(0), -1)
@@ -151,7 +159,7 @@ class EfficientNet(nn.Module):
         return out
 
 
-def EfficientNetB0():
+def EfficientNetB0(n_classes,act):
     cfg = {
         'num_blocks': [1, 2, 2, 3, 3, 4, 1],
         'expansion': [1, 6, 6, 6, 6, 6, 6],
@@ -160,12 +168,14 @@ def EfficientNetB0():
         'stride': [1, 2, 2, 2, 1, 2, 1],
         'dropout_rate': 0.2,
         'drop_connect_rate': 0.2,
+        'n_classes':n_classes,
+        'act':act
     }
     return EfficientNet(cfg)
 
 
 def test():
-    net = EfficientNetB0()
+    net = EfficientNetB0(n_classes=100,act=nn.ReLU())
     x = torch.randn(2, 3, 32, 32)
     y = net(x)
     print(y.shape)

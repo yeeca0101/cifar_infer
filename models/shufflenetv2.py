@@ -30,8 +30,9 @@ class SplitBlock(nn.Module):
 
 
 class BasicBlock(nn.Module):
-    def __init__(self, in_channels, split_ratio=0.5):
+    def __init__(self, in_channels, split_ratio=0.5,act=nn.ReLU()):
         super(BasicBlock, self).__init__()
+        self.act = act
         self.split = SplitBlock(split_ratio)
         in_channels = int(in_channels * split_ratio)
         self.conv1 = nn.Conv2d(in_channels, in_channels,
@@ -47,17 +48,18 @@ class BasicBlock(nn.Module):
 
     def forward(self, x):
         x1, x2 = self.split(x)
-        out = F.relu(self.bn1(self.conv1(x2)))
+        out = self.act(self.bn1(self.conv1(x2)))
         out = self.bn2(self.conv2(out))
-        out = F.relu(self.bn3(self.conv3(out)))
+        out = self.act(self.bn3(self.conv3(out)))
         out = torch.cat([x1, out], 1)
         out = self.shuffle(out)
         return out
 
 
 class DownBlock(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels,act):
         super(DownBlock, self).__init__()
+        self.act = act
         mid_channels = out_channels // 2
         # left
         self.conv1 = nn.Conv2d(in_channels, in_channels,
@@ -82,11 +84,11 @@ class DownBlock(nn.Module):
     def forward(self, x):
         # left
         out1 = self.bn1(self.conv1(x))
-        out1 = F.relu(self.bn2(self.conv2(out1)))
+        out1 = self.act(self.bn2(self.conv2(out1)))
         # right
-        out2 = F.relu(self.bn3(self.conv3(x)))
+        out2 = self.act(self.bn3(self.conv3(x)))
         out2 = self.bn4(self.conv4(out2))
-        out2 = F.relu(self.bn5(self.conv5(out2)))
+        out2 = self.act(self.bn5(self.conv5(out2)))
         # concat
         out = torch.cat([out1, out2], 1)
         out = self.shuffle(out)
@@ -94,10 +96,11 @@ class DownBlock(nn.Module):
 
 
 class ShuffleNetV2(nn.Module):
-    def __init__(self, net_size):
+    def __init__(self, net_size,act,n_classes):
         super(ShuffleNetV2, self).__init__()
         out_channels = configs[net_size]['out_channels']
         num_blocks = configs[net_size]['num_blocks']
+        self.act = act
 
         self.conv1 = nn.Conv2d(3, 24, kernel_size=3,
                                stride=1, padding=1, bias=False)
@@ -109,22 +112,22 @@ class ShuffleNetV2(nn.Module):
         self.conv2 = nn.Conv2d(out_channels[2], out_channels[3],
                                kernel_size=1, stride=1, padding=0, bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels[3])
-        self.linear = nn.Linear(out_channels[3], 10)
+        self.linear = nn.Linear(out_channels[3], n_classes)
 
     def _make_layer(self, out_channels, num_blocks):
-        layers = [DownBlock(self.in_channels, out_channels)]
+        layers = [DownBlock(self.in_channels, out_channels,self.act)]
         for i in range(num_blocks):
-            layers.append(BasicBlock(out_channels))
+            layers.append(BasicBlock(out_channels,act=self.act))
             self.in_channels = out_channels
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.act(self.bn1(self.conv1(x)))
         # out = F.max_pool2d(out, 3, stride=2, padding=1)
         out = self.layer1(out)
         out = self.layer2(out)
         out = self.layer3(out)
-        out = F.relu(self.bn2(self.conv2(out)))
+        out = self.act(self.bn2(self.conv2(out)))
         out = F.avg_pool2d(out, 4)
         out = out.view(out.size(0), -1)
         out = self.linear(out)
@@ -137,7 +140,7 @@ configs = {
         'num_blocks': (3, 7, 3)
     },
 
-    1: {
+    1.: {
         'out_channels': (116, 232, 464, 1024),
         'num_blocks': (3, 7, 3)
     },
@@ -145,18 +148,22 @@ configs = {
         'out_channels': (176, 352, 704, 1024),
         'num_blocks': (3, 7, 3)
     },
-    2: {
+    2.: {
         'out_channels': (224, 488, 976, 2048),
         'num_blocks': (3, 7, 3)
     }
 }
 
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters())
 
 def test():
-    net = ShuffleNetV2(net_size=0.5)
+    act= nn.ReLU()
+    net = ShuffleNetV2(net_size=2,n_classes=10,act=act)
     x = torch.randn(3, 3, 32, 32)
     y = net(x)
     print(y.shape)
+    print(count_parameters(net))
 
-
-# test()
+if __name__ == "__main__":
+    test()

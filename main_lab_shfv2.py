@@ -17,12 +17,12 @@ import argparse
 from experiments.data.datasets import CIFAR10,CIFAR100
 from models import *
 from utils import progress_bar, accuracy, AverageMeter
+from act_final import *
 
 # extenal git
-# from experiments.activation.acts import *
-from experiments.activation.acts_swish import *
+# from experiments.activation.acts_swish import *
 
-parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
+parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training on ShuffleNet')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--save_folder', default='checkpoint', type=str, help='checkpoint save folder')
 parser.add_argument('--n_classes', default=10, type=int, help='number of classes')
@@ -31,6 +31,8 @@ parser.add_argument('--resume', '-r', action='store_true',
                     help='resume from checkpoint')
 parser.add_argument('--repeat', default=1, type=int, help='number of repetitive training')
 parser.add_argument('--epoch', default=200, type=int, help='max epoch')
+parser.add_argument('--size', default=1., type=float, help='networks size')
+
 
 args = parser.parse_args()
 
@@ -159,12 +161,13 @@ def main(act,act_name,i):
     # Model
     print('==> Building model..')
     # net = VGG('VGG19')
-    net = ResNet18(num_classes=args.n_classes,act=act)
-    net = nn.DataParallel(net,[0,1],0)
+    # net = ResNet18(num_classes=args.n_classes,act=act)
     # net,optimizer = Swin_transformer(num_classes=10,act=act)
     # net = SENet18()
-    # net = ShuffleNetV2(1)
+    net = ShuffleNetV2(net_size=args.size,n_classes=args.n_classes,act=act)
     # net = EfficientNetB0()
+
+    net = nn.DataParallel(net,[0,1],0)
     net = net.to(device)
 
     if args.resume:
