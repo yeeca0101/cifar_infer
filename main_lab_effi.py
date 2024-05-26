@@ -163,9 +163,8 @@ def main(act,act_name,i):
     # net = VGG('VGG19')
     # net = ResNet18(num_classes=args.n_classes,act=act)
     # net,optimizer = Swin_transformer(num_classes=10,act=act)
-    # net = SENet18()
-    # net = ShuffleNetV2(net_size=args.size,n_classes=args.n_classes,act=act)
-    net = EfficientNetB0(n_classes=args.n_classes,act=act)
+    net = SENet18(n_classes=args.n_classes,act=act)
+    # net = EfficientNetB0(n_classes=args.n_classes,act=act)
 
     # net = nn.DataParallel(net,[0,1],0) 
     net = net.to(device)

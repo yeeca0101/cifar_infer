@@ -43,8 +43,9 @@ class BasicBlock(nn.Module):
 
 
 class PreActBlock(nn.Module):
-    def __init__(self, in_planes, planes, stride=1):
+    def __init__(self, in_planes, planes, stride=1,act=None):
         super(PreActBlock, self).__init__()
+        self.act = act
         self.bn1 = nn.BatchNorm2d(in_planes)
         self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
@@ -60,14 +61,14 @@ class PreActBlock(nn.Module):
         self.fc2 = nn.Conv2d(planes//16, planes, kernel_size=1)
 
     def forward(self, x):
-        out = F.relu(self.bn1(x))
+        out = self.act(self.bn1(x))
         shortcut = self.shortcut(out) if hasattr(self, 'shortcut') else x
         out = self.conv1(out)
-        out = self.conv2(F.relu(self.bn2(out)))
+        out = self.conv2(self.act(self.bn2(out)))
 
         # Squeeze
         w = F.avg_pool2d(out, out.size(2))
-        w = F.relu(self.fc1(w))
+        w = self.act(self.fc1(w))
         w = F.sigmoid(self.fc2(w))
         # Excitation
         out = out * w
@@ -77,8 +78,9 @@ class PreActBlock(nn.Module):
 
 
 class SENet(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=10):
+    def __init__(self, block, num_blocks, num_classes=10,act=None):
         super(SENet, self).__init__()
+        self.act=act
         self.in_planes = 64
 
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
@@ -93,12 +95,12 @@ class SENet(nn.Module):
         strides = [stride] + [1]*(num_blocks-1)
         layers = []
         for stride in strides:
-            layers.append(block(self.in_planes, planes, stride))
+            layers.append(block(self.in_planes, planes, stride,act=self.act))
             self.in_planes = planes
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.act(self.bn1(self.conv1(x)))
         out = self.layer1(out)
         out = self.layer2(out)
         out = self.layer3(out)
@@ -109,12 +111,12 @@ class SENet(nn.Module):
         return out
 
 
-def SENet18():
-    return SENet(PreActBlock, [2,2,2,2])
+def SENet18(n_classes,act):
+    return SENet(PreActBlock, [2,2,2,2],num_classes=n_classes,act=act)
 
 
 def test():
-    net = SENet18()
+    net = SENet18(act=nn.GELU())
     y = net(torch.randn(1,3,32,32))
     print(y.size())
 

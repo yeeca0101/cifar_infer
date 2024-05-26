@@ -1,10 +1,10 @@
 # for shuffleNetv2
 
-n_cls=100
+n_cls=10
 
-for net_size in 1. 2. 
+for net_size in 2. 
 do
-    python3 main_lab_shfv2.py --lr 0.1 --n_classes $n_cls --device 0 --save_folder checkpoint/shfv2_cifar$n_cls --repeat 5 --epoch 200
+    python3 main_lab_shfv2.py --lr 0.1 --n_classes $n_cls --device 0 --save_folder checkpoint/shfv2_${net_size}_cifar$n_cls --repeat 5 --epoch 200
 done
 
 
