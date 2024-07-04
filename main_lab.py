@@ -115,7 +115,6 @@ def test(net,testloader,criterion,repeat):
 def main(act,act_name,i):
     best_acc = 0  # best test accuracy
     start_epoch = 0  # start from epoch 0 or last checkpoint epoch
-    # act = SwishT(requires_grad=False)
     dataset_class = CIFAR10 if args.n_classes == 10 else CIFAR100
     save_folder = args.save_folder
     if not os.path.isdir(save_folder):
@@ -146,12 +145,12 @@ def main(act,act_name,i):
     trainset =dataset_class(
     train=True, transform=transform_train)
     trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=128, shuffle=True, num_workers=2)
+        trainset, batch_size=128, shuffle=True, num_workers=4)
 
     testset =dataset_class(
         train=False,transform=transform_test)
     testloader = torch.utils.data.DataLoader(
-        testset, batch_size=100, shuffle=False, num_workers=2)
+        testset, batch_size=100, shuffle=False, num_workers=4)
 
     classes = ('plane', 'car', 'bird', 'cat', 'deer',
             'dog', 'frog', 'horse', 'ship', 'truck')
@@ -160,12 +159,15 @@ def main(act,act_name,i):
     print('==> Building model..')
     # net = VGG('VGG19')
     net = ResNet18(num_classes=args.n_classes,act=act)
-    net = nn.DataParallel(net,[0,1],0)
     # net,optimizer = Swin_transformer(num_classes=10,act=act)
     # net = SENet18()
     # net = ShuffleNetV2(1)
     # net = EfficientNetB0()
+    # net = ResNeXt29_2x64d(n_classes=args.n_classes,act=act)
+    # net = densenet_cifar(n_classes=args.n_classes,act=act)
+
     net = net.to(device)
+    # net = nn.DataParallel(net,[0,1],0)
 
     if args.resume:
         # Load checkpoint.
@@ -227,8 +229,16 @@ def main(act,act_name,i):
     print(best_state['act'],' ',best_state['epoch'],' ',best_state['acc'])
 
 if __name__ == '__main__':
-    acts = get_activations(return_type='dict') # name,class()
-    # acts = get_GLUs(return_type='dict') # name,class()
+    # acts = get_activations(return_type='dict') # name,class()
+    acts = {
+        # 'ReLU':nn.ReLU()
+    #   'SwishT_C6':SwishT_C(beta_init=6.,requires_grad=False)
+        # 'SMU':SMU()
+        # 'SwishT_B6':SwishT_B(beta_init=6.,requires_grad=False),
+        # 'Swish_6':Swish(beta_init=6.0).requires_grad_(False)
+        # 'SwishT_C6_tr_a': SwishT_C_learnable_alpha(beta_init=6.,requires_grad_beta=False,requires_grad_alpha=True)
+        'SMU1':SMU1(alpha=0.,mu=1.)
+    }
     for i in range(1,args.repeat+1):
         for name, activation_fn in acts.items():
             print(f'act : {name}')

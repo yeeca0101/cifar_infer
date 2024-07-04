@@ -155,7 +155,7 @@ class Swish(NamedModule):
         return x*torch.sigmoid(self.beta*x)
     
 
-
+@exclude_from_activations
 class ErfAct(NamedModule):
     def __init__(self, alpha=0.75, beta=0.75):
         super(ErfAct, self).__init__()
@@ -166,12 +166,12 @@ class ErfAct(NamedModule):
         # return ErfActFunction.apply(x, self.alpha, self.beta)
         return x * torch.erf(self.alpha * torch.exp(self.beta * x))
     
-   
+@exclude_from_activations
 class Pserf(NamedModule):
     def __init__(self, gamma=1.25, delta=0.85):
         super(Pserf, self).__init__()
-        self.gamma = nn.Parameter(torch.tensor(gamma))
-        self.delta = nn.Parameter(torch.tensor(delta))
+        self.gamma = nn.Parameter(torch.tensor([gamma]))
+        self.delta = nn.Parameter(torch.tensor([delta]))
 
     def forward(self, x):
         # return PserfFunction.apply(input, self.gamma, self.delta)

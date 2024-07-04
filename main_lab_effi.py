@@ -31,8 +31,6 @@ parser.add_argument('--resume', '-r', action='store_true',
                     help='resume from checkpoint')
 parser.add_argument('--repeat', default=1, type=int, help='number of repetitive training')
 parser.add_argument('--epoch', default=200, type=int, help='max epoch')
-parser.add_argument('--size', default=1., type=float, help='networks size')
-
 
 args = parser.parse_args()
 
@@ -148,23 +146,20 @@ def main(act,act_name,i):
     trainset =dataset_class(
     train=True, transform=transform_train)
     trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=128, shuffle=True, num_workers=2)
+        trainset, batch_size=128, shuffle=True, num_workers=4)
 
     testset =dataset_class(
         train=False,transform=transform_test)
     testloader = torch.utils.data.DataLoader(
-        testset, batch_size=100, shuffle=False, num_workers=2)
+        testset, batch_size=100, shuffle=False, num_workers=4)
 
     classes = ('plane', 'car', 'bird', 'cat', 'deer',
             'dog', 'frog', 'horse', 'ship', 'truck')
 
     # Model
     print('==> Building model..')
-    # net = VGG('VGG19')
-    # net = ResNet18(num_classes=args.n_classes,act=act)
-    # net,optimizer = Swin_transformer(num_classes=10,act=act)
-    net = SENet18(n_classes=args.n_classes,act=act)
-    # net = EfficientNetB0(n_classes=args.n_classes,act=act)
+    # net = SENet18(n_classes=args.n_classes,act=act)
+    net = EfficientNetB0(n_classes=args.n_classes,act=act)
 
     # net = nn.DataParallel(net,[0,1],0) 
     net = net.to(device)
@@ -231,6 +226,19 @@ def main(act,act_name,i):
 if __name__ == '__main__':
     acts = get_activations(return_type='dict') # name,class()
     # acts = get_GLUs(return_type='dict') # name,class()
+    acts={
+        # 'SMU_1':SMU(alpha=0.0),
+        # 'SMU':SMU(alpha=0.25),
+        # 'SiLU':SiLU(),
+        # 'GELU':GELU(),
+        # 'Mish':Mish(),
+
+        # 'ReLU':nn.ReLU(),
+        # 'Swish':Swish(),
+        # 'SwishT':SwishT(beta_init=1.),
+        # 'SwishT_B':SwishT_B(),
+        'SwishT_C6':SwishT_C(beta_init=6.0,requires_grad=False),
+    }
     for i in range(1,args.repeat+1):
         for name, activation_fn in acts.items():
             print(f'act : {name}')

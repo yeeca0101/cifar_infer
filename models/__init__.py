@@ -16,5 +16,5 @@ from .efficientnet import *
 from .regnet import *
 from .dla_simple import *
 from .dla import *
-from .swin_transformer import *
+from .senet_ln import *
 

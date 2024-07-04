@@ -159,11 +159,20 @@ def count_parameters(model):
 
 def test():
     act= nn.ReLU()
-    net = ShuffleNetV2(net_size=2,n_classes=10,act=act)
-    x = torch.randn(3, 3, 32, 32)
+    net = ShuffleNetV2(net_size=1.,n_classes=100,act=act)
+    x = torch.randn(1, 3, 32, 32)
     y = net(x)
     print(y.shape)
-    print(count_parameters(net))
+    total_params = sum(p.numel() for p in net.parameters())
+    print(f"1.x Total number of parameters: {total_params:,}")
+
+    net = ShuffleNetV2(net_size=2.,n_classes=100,act=act)
+    x = torch.randn(1, 3, 32, 32)
+    y = net(x)
+    print(y.shape)
+    total_params = sum(p.numel() for p in net.parameters())
+    print(f"2.x Total number of parameters: {total_params:,}")
+
 
 if __name__ == "__main__":
     test()

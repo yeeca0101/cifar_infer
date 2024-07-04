@@ -167,7 +167,7 @@ def main(act,act_name,i):
     net = ShuffleNetV2(net_size=args.size,n_classes=args.n_classes,act=act)
     # net = EfficientNetB0()
 
-    net = nn.DataParallel(net,[0,1],0)
+    # net = nn.DataParallel(net,[0,1],0)
     net = net.to(device)
 
     if args.resume:
@@ -231,7 +231,9 @@ def main(act,act_name,i):
 
 if __name__ == '__main__':
     acts = get_activations(return_type='dict') # name,class()
-    # acts = get_GLUs(return_type='dict') # name,class()
+    acts = {
+        'ReLU':nn.ReLU(),
+    }
     for i in range(1,args.repeat+1):
         for name, activation_fn in acts.items():
             print(f'act : {name}')

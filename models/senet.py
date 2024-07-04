@@ -5,7 +5,7 @@ SENet is the winner of ImageNet-2017. The paper is not released yet.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from copy import deepcopy
 
 class BasicBlock(nn.Module):
     def __init__(self, in_planes, planes, stride=1):
@@ -45,7 +45,7 @@ class BasicBlock(nn.Module):
 class PreActBlock(nn.Module):
     def __init__(self, in_planes, planes, stride=1,act=None):
         super(PreActBlock, self).__init__()
-        self.act = act
+        self.act = deepcopy(act)
         self.bn1 = nn.BatchNorm2d(in_planes)
         self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
@@ -116,8 +116,12 @@ def SENet18(n_classes,act):
 
 
 def test():
-    net = SENet18(act=nn.GELU())
+    net = SENet18(n_classes=10,act=nn.GELU())
     y = net(torch.randn(1,3,32,32))
     print(y.size())
+    total_params = sum(p.numel() for p in net.parameters())
+    print(f"Total number of parameters: {total_params:,}")
 
-# test()
+
+if __name__ == '__main__':
+    test()

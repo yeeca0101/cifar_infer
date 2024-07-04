@@ -103,5 +103,7 @@ def test():
     x = torch.randn(1,3,32,32)
     y = net(x)
     print(y.size())
-
+    total_params = sum(p.numel() for p in net.parameters())
+    print(f"Total number of parameters: {total_params:,}")
+    
 # test()

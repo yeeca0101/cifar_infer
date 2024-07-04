@@ -82,7 +82,7 @@ class Block(nn.Module):
 
         # SE layers
         se_channels = int(in_channels * se_ratio)
-        self.se = SE(channels, se_channels)
+        self.se = SE(channels, se_channels,self.act)
 
         # Output
         self.conv3 = nn.Conv2d(channels,
@@ -109,7 +109,7 @@ class Block(nn.Module):
 
 
 class EfficientNet(nn.Module):
-    def __init__(self, cfg, num_classes=10):
+    def __init__(self, cfg,):
         super(EfficientNet, self).__init__()
         self.cfg = cfg
         self.act = cfg['act']
@@ -179,6 +179,8 @@ def test():
     x = torch.randn(2, 3, 32, 32)
     y = net(x)
     print(y.shape)
+    total_params = sum(p.numel() for p in net.parameters())
+    print(f"Total number of parameters: {total_params:,}")
 
 
 if __name__ == '__main__':

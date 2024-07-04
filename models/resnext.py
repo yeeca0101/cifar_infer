@@ -11,9 +11,10 @@ class Block(nn.Module):
     '''Grouped convolution block.'''
     expansion = 2
 
-    def __init__(self, in_planes, cardinality=32, bottleneck_width=4, stride=1):
+    def __init__(self, in_planes, cardinality=32, bottleneck_width=4, stride=1,act=None):
         super(Block, self).__init__()
         group_width = cardinality * bottleneck_width
+        self.act = act
         self.conv1 = nn.Conv2d(in_planes, group_width, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(group_width)
         self.conv2 = nn.Conv2d(group_width, group_width, kernel_size=3, stride=stride, padding=1, groups=cardinality, bias=False)
@@ -29,17 +30,18 @@ class Block(nn.Module):
             )
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
-        out = F.relu(self.bn2(self.conv2(out)))
+        out = self.act(self.bn1(self.conv1(x)))
+        out = self.act(self.bn2(self.conv2(out)))
         out = self.bn3(self.conv3(out))
         out += self.shortcut(x)
-        out = F.relu(out)
+        out = self.act(out)
         return out
 
 
 class ResNeXt(nn.Module):
-    def __init__(self, num_blocks, cardinality, bottleneck_width, num_classes=10):
+    def __init__(self, num_blocks, cardinality, bottleneck_width, num_classes=10,act=None):
         super(ResNeXt, self).__init__()
+        self.act = act
         self.cardinality = cardinality
         self.bottleneck_width = bottleneck_width
         self.in_planes = 64
@@ -56,14 +58,14 @@ class ResNeXt(nn.Module):
         strides = [stride] + [1]*(num_blocks-1)
         layers = []
         for stride in strides:
-            layers.append(Block(self.in_planes, self.cardinality, self.bottleneck_width, stride))
+            layers.append(Block(self.in_planes, self.cardinality, self.bottleneck_width, stride,act=self.act))
             self.in_planes = Block.expansion * self.cardinality * self.bottleneck_width
         # Increase bottleneck_width by 2 after each stage.
         self.bottleneck_width *= 2
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.act(self.bn1(self.conv1(x)))
         out = self.layer1(out)
         out = self.layer2(out)
         out = self.layer3(out)
@@ -74,8 +76,8 @@ class ResNeXt(nn.Module):
         return out
 
 
-def ResNeXt29_2x64d():
-    return ResNeXt(num_blocks=[3,3,3], cardinality=2, bottleneck_width=64)
+def ResNeXt29_2x64d(n_classes=None,act=None):
+    return ResNeXt(num_blocks=[3,3,3], cardinality=2, bottleneck_width=64,act=act,num_classes=n_classes)
 
 def ResNeXt29_4x64d():
     return ResNeXt(num_blocks=[3,3,3], cardinality=4, bottleneck_width=64)
@@ -87,9 +89,13 @@ def ResNeXt29_32x4d():
     return ResNeXt(num_blocks=[3,3,3], cardinality=32, bottleneck_width=4)
 
 def test_resnext():
-    net = ResNeXt29_2x64d()
+    net = ResNeXt29_2x64d(n_classes=10,act=nn.GELU())
     x = torch.randn(1,3,32,32)
     y = net(x)
     print(y.size())
+    total_params = sum(p.numel() for p in net.parameters())
+    print(f"Total number of parameters: {total_params:,}")
 
-# test_resnext()
+if __name__ == '__main__':
+
+    test_resnext()
