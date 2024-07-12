@@ -10,46 +10,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# class ASN(nn.Module):
-#     def __init__(self, beta_init=1.0, alpha=0.1):
-#         super(ASN, self).__init__()
-#         self.beta = nn.Parameter(torch.tensor([beta_init]))  # Learnable parameter
-#         self.alpha = alpha  # Could also be made learnable if desired
-
-#     def forward(self, x):
-#         sig_part = torch.sigmoid(self.beta * x)
-#         sqr_part = torch.pow(x, 2)
-#         # Sanity check
-#         if torch.isnan(sig_part).any() or torch.isnan(sqr_part).any():
-#             print("NaN detected in ASN components")
-#         y = x * sig_part + self.alpha * sqr_part
-#         # Clamp output to prevent extreme values
-#         y = torch.clamp(y, -5, 5)  # You might adjust these bounds
-#         return y
-
-class ASN(nn.Module):
-    def __init__(self, beta_init=1.0, alpha=0.1):
-        super(ASN, self).__init__()
-        self.beta = nn.Parameter(torch.tensor([beta_init]),requires_grad=True)  # Learnable parameter
-        self.alpha = alpha  # Could also be made learnable if desired
-
-    def forward(self, x):
-        sig_part = torch.sigmoid(self.beta * x)
-        sqr_part = torch.pow(x, 2)
-        y = x * sig_part + self.alpha * sqr_part
-        y = torch.clamp(y, -5, 5)
-        # x = x * torch.sigmoid(self.beta * x) + self.alpha * torch.pow(x, 2)
-        # print(x)
-        return y
-
-class Swish(nn.Module):
-    def __init__(self,beta_init=1.0):
-        super(Swish, self).__init__()
-        self.beta = nn.Parameter(torch.tensor([beta_init]))
-
-    def forward(self, x):
-        return x * torch.sigmoid(self.beta *x)
-
 class BasicBlock(nn.Module):
     expansion = 1
 
@@ -155,8 +115,9 @@ class Bottleneck(nn.Module):
 #         return out
 
 class ResNet(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=10,act=nn.GELU()):
+    def __init__(self, block, num_blocks, num_classes=10,act=nn.GELU(),img_size=32):
         super(ResNet, self).__init__()
+        self.img_size = img_size
         self.in_planes = 64
         self.act = act
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3,
@@ -182,14 +143,15 @@ class ResNet(nn.Module):
         out = self.layer2(out)
         out = self.layer3(out)
         out = self.layer4(out)
-        out = F.avg_pool2d(out, 4)
+        out = F.avg_pool2d(out, 8 if self.img_size==64 else 4)
+        # out = F.adaptive_avg_pool2d(out,512)
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
 
 
-def ResNet18(num_classes=10,act=None):
-    return ResNet(BasicBlock, [2, 2, 2, 2],num_classes=num_classes,act=act)
+def ResNet18(num_classes=10,act=None,img_size=32):
+    return ResNet(BasicBlock, [2, 2, 2, 2],num_classes=num_classes,act=act,img_size=img_size)
 
 
 def ResNet34():

@@ -175,8 +175,8 @@ def EfficientNetB0(n_classes,act):
 
 
 def test():
-    net = EfficientNetB0(n_classes=100,act=nn.ReLU())
-    x = torch.randn(2, 3, 32, 32)
+    net = EfficientNetB0(n_classes=2,act=nn.ReLU())
+    x = torch.randn(2, 3, 224, 224)
     y = net(x)
     print(y.shape)
     total_params = sum(p.numel() for p in net.parameters())
