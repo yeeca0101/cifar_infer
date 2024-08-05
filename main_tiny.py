@@ -209,9 +209,9 @@ def main(act,act_name,i):
 if __name__ == '__main__':
     acts = get_activations(return_type='dict') # name,class()
     acts = {
-        'SwishT_C':SwishT_C(),
         'ReLU':nn.ReLU(),
-        'Swish':Swish(),
+        # 'Swish':Swish(),
+        # 'SwishT_C':SwishT_C(),
     }
     for i in range(1,args.repeat+1):
         for name, activation_fn in acts.items():
